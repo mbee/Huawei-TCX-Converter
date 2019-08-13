@@ -7,6 +7,7 @@ import math, operator, sys # Distance calcs, sorting by timestamp, arguments
 from datetime import datetime as dt # Time formatting
 # Import external resources
 from typing import List, Union
+import os
 
 try:
     import xmlschema # Validation
@@ -188,6 +189,7 @@ def read_file(input_file: str) -> dict:
 
     except:
         print('FAILED')
+        raise
         exit()
 
     print('OKAY')
@@ -231,6 +233,7 @@ def filter_data(data: dict) ->  dict:
 
     except:
         print('FAILED')
+        raise
         return original_data
 
     return data
@@ -334,6 +337,7 @@ def process_gps(data: dict) -> dict:
 
     except:
         print('FAILED')
+        raise
         exit()
 
     print('OKAY')
@@ -389,6 +393,7 @@ def file_details(data: dict, options: dict) -> tuple:
 
     except:
         print('Something went wrong :-(')
+        raise
         exit()
 
     return data, lap_stats
@@ -431,6 +436,7 @@ def calculate_lap_stats(data: dict) -> list:
 
     except:
         print('generate_lap_stats FAILED')
+        raise
         exit()
 
     print('generate_lap_stats OKAY')
@@ -472,6 +478,7 @@ def merge_data(data: dict) -> list:
 
     except:
         print('FAILED')
+        raise
         exit()
 
     print('OKAY')
@@ -630,6 +637,7 @@ def generate_xml(data: list, lap_stats: list, options: dict) -> ET.Element:
         print('OKAY')
     except:
         print('FAILED')
+        raise
 
     return TrainingCenterDatabase
 
@@ -694,6 +702,7 @@ def save_xml(TrainingCenterDatabase: ET.Element, input_file: str) -> str:
         print('OKAY')
     except:
         print('FAILED')
+        raise
 
     return new_filename
 
@@ -729,22 +738,29 @@ def validate_xml(filename: str, xmlschema_found: bool):
                 print('OKAY')
         except:
             print('FAILED')
+            raise
     else:
         print('FAILED: xmlschema not found')
 
 def main():
+    import re
     # Call all functions (considering user options)
-    input_file, options = parse_arguments()
-    data = read_file(input_file)
-    if options['filter']: data = filter_data(data)
-    data = process_gps(data)
-    data, lap_stats = file_details(data, options)
-    TrainingCenterDatabase = generate_xml(data, lap_stats, options)
-    filename = save_xml(TrainingCenterDatabase, input_file)
-    if options['validate']: validate_xml(filename, xmlschema_found)
+    path, options = parse_arguments()
+    if os.path.isdir(path):
+      input_files = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f)) and re.match("^HiTrack_\\d+$", f)]
+    else:
+      input_files = [path, ]
+    for input_file in input_files:
+      data = read_file(input_file)
+      if options['filter']: data = filter_data(data)
+      data = process_gps(data)
+      data, lap_stats = file_details(data, options)
+      TrainingCenterDatabase = generate_xml(data, lap_stats, options)
+      filename = save_xml(TrainingCenterDatabase, input_file)
+      if options['validate']: validate_xml(filename, xmlschema_found)
 
-    # Whitespace improves formatting
-    print('\n')
+      # Whitespace improves formatting
+      print('\n')
 
 if __name__ == '__main__':
     main()
